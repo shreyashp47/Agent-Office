@@ -7,6 +7,7 @@ import { Character } from "./character.js";
 import { connectOffice } from "./api.js";
 import { hashId } from "./logic.js";
 import { MemoCard } from "./memo.js";
+import { initMobileSheet } from "./mobile.js";
 
 const params = new URLSearchParams(location.search);
 const debugFlag = params.get("debug") === "1";
@@ -48,9 +49,21 @@ connectOffice({
     for (const id of [...characters.keys()]) {
       if (!seen.has(id)) characters.delete(id);
     }
+    mobileSheet.sheet.update(characters);
   },
   onModeChange: (m) => {
     mode = m;
+  },
+});
+
+// Mobile agent sheet (M5 #20)
+const mobileSheet = initMobileSheet({
+  characters,
+  onSelect: (agentId) => {
+    const char = characters.get(agentId);
+    if (char) {
+      // Center camera on selected agent (future enhancement)
+    }
   },
 });
 

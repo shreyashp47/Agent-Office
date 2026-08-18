@@ -19,3 +19,15 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Smoke test (backend)
+        env:
+          PORT: 4101
+          STATE_PATH: /tmp/agent-office-ci-state.json
+          JOIN_KEYS_PATH: /tmp/agent-office-ci-keys.json
+          SMOKE_PORT: 4101
+          SMOKE_SET_STATE: "1"
+        run: |
+          node backend/dist/index.js > /tmp/agent-office-ci.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          npx tsx scripts/smoke_test.ts
