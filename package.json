@@ -1,0 +1,30 @@
+{
+  "name": "agent-office",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pixel-art office dashboard for OpenCode agents",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "plugin",
+    "assets"
+  ],
+  "scripts": {
+    "build": "npm run build -w backend -w plugin",
+    "test": "npm run test -w backend",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck -w backend -w plugin",
+    "start": "npm run start -w backend",
+    "dev": "npm run dev -w backend",
+    "install-plugin": "npm run install-plugin -w plugin"
+  },
+  "devDependencies": {
+    "eslint": "^9.17.0",
+    "globals": "^17.11.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.19.0"
+  }
+}

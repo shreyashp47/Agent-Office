@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.log
+state.json
+join-keys.json
+.env
+.DS_Store

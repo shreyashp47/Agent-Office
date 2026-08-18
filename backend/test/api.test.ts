@@ -1,0 +1,118 @@
+import { describe, expect, it } from "vitest";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createApp, SAMPLE_KEY } from "../src/app.js";
+import { StateStore } from "../src/store.js";
+
+function testApp() {
+  const dir = mkdtempSync(join(tmpdir(), "office-api-"));
+  const store = new StateStore(join(dir, "state.json"));
+  store.ensureJoinKey(SAMPLE_KEY, 3);
+  return { app: createApp(store, join(dir, "dist")), store };
+}
+
+describe("API", () => {
+  it("GET /health", async () => {
+    const { app } = testApp();
+    const res = await app.request("/health");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true });
+  });
+
+  it("GET /status returns empty office", async () => {
+    const { app } = testApp();
+    const res = await app.request("/status");
+    expect(await res.json()).toMatchObject({ agents: {} });
+  });
+
+  it("POST /set_state round-trips", async () => {
+    const { app } = testApp();
+    const set = await app.request("/set_state", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ state: "writing", detail: "editing files" }),
+    });
+    expect(set.status).toBe(200);
+    const body = await set.json();
+    expect(body.state).toBe("writing");
+    expect(body.zone).toBe("desk");
+
+    const status = await app.request("/status");
+    const snapshot = await status.json();
+    expect(snapshot.agents.primary.state).toBe("writing");
+  });
+
+  it("POST /set_state rejects invalid state with 400", async () => {
+    const { app } = testApp();
+    const res = await app.request("/set_state", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ state: "sleeping" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("join → push → leave flow", async () => {
+    const { app } = testApp();
+    const join = await app.request("/join-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key: SAMPLE_KEY, name: "refactor-bot" }),
+    });
+    expect(join.status).toBe(201);
+    const { agentId, token } = await join.json();
+
+    const push = await app.request("/agent-push", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agentId, token, state: "researching", detail: "grepping code" }),
+    });
+    expect(push.status).toBe(200);
+    expect((await push.json()).zone).toBe("desk");
+
+    const bad = await app.request("/agent-push", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agentId, token: "nope", state: "error" }),
+    });
+    expect(bad.status).toBe(401);
+
+    const leave = await app.request("/leave-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agentId, token }),
+    });
+    expect(leave.status).toBe(200);
+
+    const status = await app.request("/status");
+    const snapshot = await status.json();
+    expect(snapshot.agents[agentId]).toBeUndefined();
+  });
+
+  it("wrong join key → 401, capacity → 403", async () => {
+    const { app } = testApp();
+    const bad = await app.request("/join-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key: "unknown", name: "x" }),
+    });
+    expect(bad.status).toBe(401);
+
+    // fill the key to capacity (3), then reject
+    for (let i = 0; i < 3; i++) {
+      const res = await app.request("/join-agent", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ key: SAMPLE_KEY, name: `bot${i}` }),
+      });
+      expect(res.status).toBe(201);
+    }
+    const full = await app.request("/join-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key: SAMPLE_KEY, name: "bot4" }),
+    });
+    expect(full.status).toBe(403);
+  });
+});

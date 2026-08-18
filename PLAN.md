@@ -10,6 +10,24 @@ A pixel-art office dashboard that visualizes [OpenCode](https://opencode.ai) age
 
 **Problem it solves:** AI coding agents work invisibly in a terminal. This gives them a physical, glanceable presence — who is working, on what, and whether anything needs your attention.
 
+## 1.6 Implementation Status (M0–M2)
+
+Implemented and verified end-to-end on 2026-08-18 (OpenCode 1.18.18, Node 20):
+
+| Milestone | Status | Notes |
+|---|---|---|
+| **M0 — Scaffold** | ✅ Done | npm workspaces monorepo (`backend/`, `frontend/`, `plugin/`, `assets/`), strict TS, ESLint, Prettier, MIT license, CI workflow |
+| **M1 — Backend** | ✅ Done | Hono app on `:4099` (`PORT` env): `/health`, `/status`, `/events` (SSE), `/set_state`, `/join-agent`, `/agent-push` (rate-limited), `/leave-agent`; atomic `state.json` persistence; 18 passing tests (`npm test`) |
+| **M2 — OpenCode plugin** | ✅ Done | `plugin/src/office-sync.ts` auto-discovered from `~/.config/opencode/plugins/` (plural; the singular `plugin/` dir is NOT scanned). Verified live: joins office, `chat.message`→thinking, `tool.execute.before`→writing/researching/executing, `session.idle`→idle, heartbeat every 15s, clean `leave-agent` on dispose |
+| **M3 — Frontend** | ⏳ Pending | Pixel office canvas (Issue #11–#14) |
+| **M4 — Multi-agent** | ⏳ Pending | (Issue #15–#17) |
+| **M5 — Polish** | ⏳ Pending | (Issue #18–#22) |
+
+Implementation learnings (feed back into M3+):
+- **Plugin discovery:** OpenCode scans `{plugin,plugins}/*.{ts,js}` in each config directory. Global plugins live in `~/.config/opencode/plugins/`. OpenCode auto-installs `@opencode-ai/plugin` into the config dir on first boot — a plugin imported from it silently fails to load until that install completes (our first test ran too early).
+- **Hooks vs events:** `session.idle` / `session.error` / `permission.replied` arrive via the generic `event` hook, not dedicated hooks. `chat.message`, `permission.ask`, `tool.execute.before/after` are real hooks.
+- **Install:** `npm run install-plugin` copies the plugin into the global config dir; a restart (or new process) loads it. Every new OpenCode instance creates its own office agent.
+
 **Core differentiator vs. Star-Office-UI:** Star-Office-UI relies on agents voluntarily running `set_state.py`. OpenCode Office hooks directly into OpenCode's plugin events (`tool.execute.before/after`, `session.idle`, `session.error`, `permission.asked`), so state updates are automatic and accurate — no agent cooperation required.
 
 ## 1.5 Current State & Migration Path
