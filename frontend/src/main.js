@@ -5,6 +5,7 @@ import { Scene } from "./scene.js";
 import { loadSprites } from "./sprites.js";
 import { Character } from "./character.js";
 import { connectOffice } from "./api.js";
+import { hashId } from "./logic.js";
 
 const params = new URLSearchParams(location.search);
 const debugFlag = params.get("debug") === "1";
@@ -18,10 +19,18 @@ const registry = await loadSprites("assets/sprites.json");
 const characters = new Map();
 let mode = "offline";
 
+const SPRITE_IDS = ["worker", "sam", "dino"];
+
+function pickSprite(registry, agentId) {
+  const available = SPRITE_IDS.filter((id) => registry.has(id));
+  if (available.length === 0) return registry.get(registry.defaultId);
+  return registry.get(available[hashId(agentId) % available.length]);
+}
+
 function upsertAgent(agent) {
   let c = characters.get(agent.id);
   if (!c) {
-    const sprite = registry.get(agent.sprite) ?? registry.get(registry.defaultId);
+    const sprite = agent.sprite ? registry.get(agent.sprite) : pickSprite(registry, agent.id);
     c = new Character({ id: agent.id, name: agent.name ?? agent.id, sprite, layout: scene.layout });
     characters.set(agent.id, c);
   }

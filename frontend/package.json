@@ -5,6 +5,10 @@
   "type": "module",
   "description": "Canvas 2D pixel office frontend (milestone M3)",
   "scripts": {
-    "build": "mkdir -p dist && cp index.html dist/index.html && cp -r src dist/ && cp -r assets dist/"
+    "build": "mkdir -p dist && cp index.html dist/index.html && cp -r src dist/ && cp -r assets dist/",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
   }
 }
