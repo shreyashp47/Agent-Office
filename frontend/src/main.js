@@ -6,6 +6,7 @@ import { loadSprites } from "./sprites.js";
 import { Character } from "./character.js";
 import { connectOffice } from "./api.js";
 import { hashId } from "./logic.js";
+import { MemoCard } from "./memo.js";
 
 const params = new URLSearchParams(location.search);
 const debugFlag = params.get("debug") === "1";
@@ -133,3 +134,8 @@ for (const [state, label, detail] of STATE_BUTTONS) {
 document.addEventListener("keydown", (e) => {
   if (e.key === "d" || e.key === "D") scene.debug = !scene.debug;
 });
+
+// Memo card (M5 #18)
+const memo = new MemoCard({ container: document.body, fetchUrl: "/api/memo" });
+memo.mount();
+memo.show();
