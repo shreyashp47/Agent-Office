@@ -11,13 +11,15 @@
     "assets"
   ],
   "scripts": {
-    "build": "npm run build -w backend -w plugin",
+    "build": "npm run build -w backend -w plugin -w frontend",
     "test": "npm run test -w backend",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "npm run typecheck -w backend -w plugin",
+    "typecheck": "npm run typecheck -w backend -w plugin && tsc --noEmit -p scripts/tsconfig.json",
     "start": "npm run start -w backend",
     "dev": "npm run dev -w backend",
+    "smoke": "tsx scripts/smoke_test.ts",
+    "tunnel": "bash scripts/tunnel.sh",
     "install-plugin": "npm run install-plugin -w plugin"
   },
   "devDependencies": {

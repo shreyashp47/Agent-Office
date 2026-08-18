@@ -1,0 +1,34 @@
+{
+  "size": [960, 540],
+  "stateZone": {
+    "idle": "sofa",
+    "writing": "desk",
+    "researching": "desk",
+    "executing": "desk",
+    "thinking": "desk",
+    "waiting": "door",
+    "error": "server"
+  },
+  "zones": [
+    { "id": "sofa", "x": 50, "y": 310, "w": 230, "h": 150, "spots": [[165, 385]] },
+    { "id": "desk", "x": 320, "y": 260, "w": 290, "h": 140, "spots": [[370, 390], [510, 390]] },
+    { "id": "door", "x": 40, "y": 420, "w": 140, "h": 110, "spots": [[95, 500]] },
+    { "id": "server", "x": 790, "y": 160, "w": 130, "h": 130, "spots": [[855, 252]] }
+  ],
+  "furniture": [
+    { "type": "window", "x": 330, "y": 40, "w": 300, "h": 70 },
+    { "type": "clock", "x": 760, "y": 30, "w": 46, "h": 46 },
+    { "type": "poster", "x": 170, "y": 50, "w": 80, "h": 64 },
+    { "type": "rug", "x": 50, "y": 310, "w": 230, "h": 150 },
+    { "type": "sofa", "x": 80, "y": 350, "w": 170, "h": 56 },
+    { "type": "plant", "x": 720, "y": 300, "w": 44, "h": 90 },
+    { "type": "desk", "x": 330, "y": 310, "w": 130, "h": 46 },
+    { "type": "monitor", "x": 345, "y": 272, "w": 100, "h": 38 },
+    { "type": "chair", "x": 352, "y": 370, "w": 36, "h": 38 },
+    { "type": "desk", "x": 470, "y": 310, "w": 130, "h": 46 },
+    { "type": "monitor", "x": 485, "y": 272, "w": 100, "h": 38 },
+    { "type": "chair", "x": 492, "y": 370, "w": 36, "h": 38 },
+    { "type": "server", "x": 800, "y": 170, "w": 110, "h": 62 },
+    { "type": "door", "x": 50, "y": 430, "w": 80, "h": 110 }
+  ]
+}

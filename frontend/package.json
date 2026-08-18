@@ -5,6 +5,6 @@
   "type": "module",
   "description": "Canvas 2D pixel office frontend (milestone M3)",
   "scripts": {
-    "build": "mkdir -p dist && cp index.html dist/index.html"
+    "build": "mkdir -p dist && cp index.html dist/index.html && cp -r src dist/ && cp -r assets dist/"
   }
 }

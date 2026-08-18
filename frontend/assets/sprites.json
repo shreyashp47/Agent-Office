@@ -1,0 +1,20 @@
+{
+  "frameW": 32,
+  "frameH": 40,
+  "fps": 8,
+  "default": "worker",
+  "sprites": {
+    "worker": {
+      "sheet": null,
+      "palette": { "skin": "#f0c8a0", "hair": "#4a3728", "shirt": "#3a7bd5", "pants": "#2f2f3a", "shoes": "#1c1c22" }
+    },
+    "sam": {
+      "sheet": null,
+      "palette": { "skin": "#e8b88a", "hair": "#2b2b2b", "shirt": "#e0703c", "pants": "#3a3330", "shoes": "#22262e" }
+    },
+    "dino": {
+      "sheet": null,
+      "palette": { "skin": "#8fd46a", "hair": "#4e9b3a", "shirt": "#c4e8a0", "pants": "#5a8f44", "shoes": "#2f5a28" }
+    }
+  }
+}
