@@ -7,6 +7,7 @@ import {
   saveOverride,
   loadOverride,
   clearOverride,
+  wrapIndex,
   STORAGE_KEYS,
 } from "../src/assetmanager.js";
 
@@ -130,6 +131,24 @@ describe("override persistence", () => {
     saveOverride(storage, STORAGE_KEYS.sprites, VALID_MANIFEST);
     clearOverride(storage, STORAGE_KEYS.sprites);
     expect(loadOverride(storage, STORAGE_KEYS.sprites)).toBe(null);
+  });
+});
+
+describe("wrapIndex (focus trap)", () => {
+  it("cycles forward and wraps to the start", () => {
+    expect(wrapIndex(4, 0, 1)).toBe(1);
+    expect(wrapIndex(4, 3, 1)).toBe(0);
+  });
+
+  it("cycles backward and wraps to the end", () => {
+    expect(wrapIndex(4, 0, -1)).toBe(3);
+    expect(wrapIndex(4, 3, -1)).toBe(2);
+  });
+
+  it("handles multi-step jumps and empty lists", () => {
+    expect(wrapIndex(4, 1, 5)).toBe(2);
+    expect(wrapIndex(4, 1, -5)).toBe(0);
+    expect(wrapIndex(0, 0, 1)).toBe(-1);
   });
 });
 

@@ -130,9 +130,24 @@ export function defaultStorage() {
   return globalThis.localStorage ?? null;
 }
 
+// Focus-trap helper (pure): returns the wrapped index for a list of focusable
+// elements so Tab/Shift+Tab cycles within the open dialog instead of leaking
+// into the page behind it.
+export function wrapIndex(length, index, delta) {
+  if (length <= 0) return -1;
+  return ((index + delta) % length + length) % length;
+}
+
 // ---------------------------------------------------------------------------
 // DOM sidebar
 // ---------------------------------------------------------------------------
+
+const FOCUSABLE =
+  'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+
+function getFocusables(container) {
+  return [...container.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+}
 
 const STYLE = `
   .asset-manager-btn {
@@ -249,6 +264,16 @@ const STYLE = `
     padding: 0 4px;
   }
   .asset-panel .close:hover { color: #e7e9ee; }
+  .asset-manager-btn:focus-visible,
+  .asset-panel button:focus-visible,
+  .asset-panel input:focus-visible,
+  .asset-panel select:focus-visible,
+  .asset-panel textarea:focus-visible,
+  .asset-panel a:focus-visible,
+  .asset-panel [tabindex]:focus-visible {
+    outline: 2px solid #6a9fe8;
+    outline-offset: 2px;
+  }
 `;
 
 export class AssetManager {
@@ -274,18 +299,56 @@ export class AssetManager {
     this.element = document.createElement("div");
     this.element.className = "asset-panel";
     this.element.style.display = "none";
+    this.element.setAttribute("role", "dialog");
+    this.element.setAttribute("aria-modal", "true");
+    this.element.setAttribute("aria-label", "Asset manager");
+    this.element.addEventListener("keydown", (e) => this.onKeydown(e));
     this.element.innerHTML = `<style>${STYLE}</style><div id="asset-content"></div>`;
     document.body.appendChild(this.element);
     this.render();
   }
 
   toggle() {
-    if (!this.unlocked) {
-      this.renderUnlock();
-      this.element.style.display = "flex";
+    if (this.element.style.display !== "none") {
+      this.close();
       return;
     }
-    this.element.style.display = this.element.style.display === "none" ? "flex" : "none";
+    if (!this.unlocked) {
+      this.renderUnlock();
+    } else {
+      this.renderPanel();
+    }
+    this.element.style.display = "flex";
+    this.focusFirst();
+  }
+
+  close() {
+    this.element.style.display = "none";
+    this.btn?.focus();
+  }
+
+  focusFirst() {
+    const focusables = getFocusables(this.element);
+    focusables[0]?.focus();
+  }
+
+  // Focus trap: Tab/Shift+Tab cycle within the dialog, Escape closes it and
+  // returns focus to the launcher button.
+  onKeydown(e) {
+    if (e.key === "Escape") {
+      this.close();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const focusables = getFocusables(this.element);
+    if (focusables.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const current = focusables.indexOf(document.activeElement);
+    const next = wrapIndex(focusables.length, current, e.shiftKey ? -1 : 1);
+    e.preventDefault();
+    focusables[next].focus();
   }
 
   render() {
@@ -300,13 +363,13 @@ export class AssetManager {
     const content = this.element.querySelector("#asset-content");
     const hasPassword = Boolean(this.storage.getItem(STORAGE_KEYS.password));
     content.innerHTML = `
-      <button class="close" data-act="close" title="close">✕</button>
+      <button class="close" data-act="close" aria-label="Close asset manager" title="close">✕</button>
       <h2>Asset manager</h2>
       <div class="unlock">
         <p class="meta">${hasPassword ? "Enter the admin password" : "No password set — create one (default: ${DEFAULT_PASSWORD})"}</p>
-        <input type="password" id="asset-pw" placeholder="password" />
+        <input type="password" id="asset-pw" placeholder="password" aria-label="Admin password" />
         <button class="primary" data-act="unlock">${hasPassword ? "Unlock" : "Set password"}</button>
-        <div id="asset-msg"></div>
+        <div id="asset-msg" aria-live="polite"></div>
       </div>`;
     content.querySelector('[data-act="unlock"]').addEventListener("click", async () => {
       const pw = content.querySelector("#asset-pw").value;
@@ -315,65 +378,64 @@ export class AssetManager {
         if (await checkPassword(pw, stored)) {
           this.unlocked = true;
           this.renderPanel();
+          this.focusFirst();
         } else {
           content.querySelector("#asset-msg").innerHTML = '<p class="error">Wrong password</p>';
+          content.querySelector("#asset-pw").select();
         }
       } else {
         this.storage.setItem(STORAGE_KEYS.password, await hashPassword(pw || DEFAULT_PASSWORD));
         this.unlocked = true;
         this.renderPanel();
+        this.focusFirst();
       }
     });
-    content.querySelector('[data-act="close"]').addEventListener("click", () => {
-      this.element.style.display = "none";
-    });
+    content.querySelector('[data-act="close"]').addEventListener("click", () => this.close());
   }
 
   renderPanel() {
     const content = this.element.querySelector("#asset-content");
     content.innerHTML = `
-      <button class="close" data-act="close" title="close">✕</button>
+      <button class="close" data-act="close" aria-label="Close asset manager" title="close">✕</button>
       <h2>Asset manager</h2>
       <div class="row">
         <span class="meta">admin</span>
         <button data-act="pw">change password</button>
       </div>
       <div id="asset-pw-form" style="display:none">
-        <input type="password" id="asset-newpw" placeholder="new password" />
+        <input type="password" id="asset-newpw" placeholder="new password" aria-label="New admin password" />
         <div class="row">
           <button class="primary" data-act="pw-save">save</button>
           <button data-act="pw-cancel">cancel</button>
         </div>
-        <div id="asset-pw-msg"></div>
+        <div id="asset-pw-msg" aria-live="polite"></div>
       </div>
       <div class="section">
         <h3>Scene layout</h3>
         <div id="asset-scene-info" class="meta"></div>
-        <input type="file" id="asset-scene-file" accept="application/json,.json" />
+        <input type="file" id="asset-scene-file" accept="application/json,.json" aria-label="Choose scene layout JSON file" />
         <div class="row">
-          <button class="primary" data-act="scene-apply">apply file</button>
-          <button class="danger" data-act="scene-reset">reset</button>
+          <button class="primary" data-act="scene-apply" aria-label="Apply uploaded scene layout">apply file</button>
+          <button class="danger" data-act="scene-reset" aria-label="Reset scene to built-in">reset</button>
         </div>
-        <div id="asset-scene-msg"></div>
+        <div id="asset-scene-msg" aria-live="polite"></div>
       </div>
       <div class="section">
         <h3>Sprites manifest</h3>
         <div id="asset-sprites-info" class="meta"></div>
-        <input type="file" id="asset-sprites-file" accept="application/json,.json" />
+        <input type="file" id="asset-sprites-file" accept="application/json,.json" aria-label="Choose sprites manifest JSON file" />
         <div class="row">
-          <button class="primary" data-act="sprites-apply">apply file</button>
-          <button class="danger" data-act="sprites-reset">reset</button>
+          <button class="primary" data-act="sprites-apply" aria-label="Apply uploaded sprites manifest">apply file</button>
+          <button class="danger" data-act="sprites-reset" aria-label="Reset sprites to built-in">reset</button>
         </div>
-        <div id="asset-sprites-msg"></div>
+        <div id="asset-sprites-msg" aria-live="polite"></div>
       </div>`;
     this.refreshInfo();
 
     let pendingScene = null;
     let pendingSprites = null;
 
-    content.querySelector('[data-act="close"]').addEventListener("click", () => {
-      this.element.style.display = "none";
-    });
+    content.querySelector('[data-act="close"]').addEventListener("click", () => this.close());
 
     const togglePwForm = (show) => {
       content.querySelector("#asset-pw-form").style.display = show ? "flex" : "none";
