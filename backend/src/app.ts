@@ -3,6 +3,7 @@ import { streamSSE } from "hono/streaming";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { getMimeType } from "hono/utils/mime";
 import { StateStore } from "./store.js";
 import { isState, STATE_ENUM, type OfficeState } from "./states.js";
 
@@ -10,7 +11,7 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const ROOT = join(__dirname, "..", "..");
 const DEFAULT_FRONTEND_DIST = join(ROOT, "frontend", "dist");
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.2.0";
 export const SAMPLE_KEY = "ocj_local_01";
 const PUSH_LIMIT_PER_SEC = 4;
 const pushTimes = new Map<string, number[]>();
@@ -122,7 +123,7 @@ export function createApp(store: StateStore, frontendDist = DEFAULT_FRONTEND_DIS
     const filePath = join(frontendDist, urlPath);
     if (existsSync(filePath)) {
       return c.body(readFileSync(filePath), 200, {
-        "Content-Type": "text/html",
+        "Content-Type": getMimeType(filePath) ?? "application/octet-stream",
       });
     }
     return c.html(PLACEHOLDER);
