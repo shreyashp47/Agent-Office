@@ -98,6 +98,48 @@ describe("StateStore", () => {
     expect(store.getAgent("a1")).toBeUndefined();
   });
 
+  it("sweeper uses 60s/120s defaults: idle at >60s, offline at >120s (issue #17)", () => {
+    const store = tempStore();
+    store.upsertAgent("a1", { name: "bot" });
+    store.setState("a1", "writing");
+    const lastSeen = store.getAgent("a1")!.lastSeen;
+
+    expect(store.sweep(lastSeen + 30_000)).toEqual([]);
+    expect(store.getAgent("a1")?.state).toBe("writing");
+
+    const toIdle = store.sweep(lastSeen + 61_000);
+    expect(toIdle).toHaveLength(1);
+    expect(store.getAgent("a1")?.state).toBe("idle");
+
+    const toOffline = store.sweep(lastSeen + 121_000);
+    expect(toOffline).toHaveLength(1);
+    expect(store.getAgent("a1")).toBeUndefined();
+  });
+
+  it("sweeper: an already-idle agent is not touched until it goes offline", () => {
+    const store = tempStore();
+    store.upsertAgent("a1", { name: "bot" }); // idle by default
+    const lastSeen = store.getAgent("a1")!.lastSeen;
+    expect(store.sweep(lastSeen + 90_000)).toEqual([]);
+    expect(store.getAgent("a1")).toBeDefined();
+    expect(store.sweep(lastSeen + 130_000)).toHaveLength(1);
+    expect(store.getAgent("a1")).toBeUndefined();
+  });
+
+  it("sweeper removes offline agents from their join key roster", () => {
+    const store = tempStore();
+    store.ensureJoinKey("team", 3);
+    const joined = store.joinAgent("team", "bot");
+    if ("error" in joined) throw new Error("join failed");
+    const { id } = joined.agent;
+    store.setState(id, "writing");
+    const lastSeen = store.getAgent(id)!.lastSeen;
+
+    store.sweep(lastSeen + 130_000, 60_000, 120_000);
+    expect(store.getAgent(id)).toBeUndefined();
+    expect(store.snapshot().joinKeys.team?.agents).not.toContain(id);
+  });
+
   it("sweeper interval ticks and logs", async () => {
     const store = tempStore();
     store.upsertAgent("a1", { name: "bot" });
