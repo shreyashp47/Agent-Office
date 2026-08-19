@@ -1,13 +1,15 @@
 // Entry point: canvas scene, sprite registry, live character management,
-// demo mode, set-state toolbar and debug overlay toggle.
+// demo mode, set-state toolbar, debug overlay toggle, asset manager sidebar
+// (M5 #21).
 
 import { Scene } from "./scene.js";
-import { loadSprites } from "./sprites.js";
+import { loadSprites, parseManifest, createRegistry } from "./sprites.js";
 import { Character } from "./character.js";
 import { connectOffice } from "./api.js";
-import { hashId } from "./logic.js";
+import { hashId, pickSpot, zoneById } from "./logic.js";
 import { MemoCard } from "./memo.js";
 import { initMobileSheet } from "./mobile.js";
+import { AssetManager, STORAGE_KEYS, loadOverride } from "./assetmanager.js";
 
 const params = new URLSearchParams(location.search);
 const debugFlag = params.get("debug") === "1";
@@ -16,7 +18,30 @@ const demoEnabled = params.get("demo") !== "0";
 const canvas = document.getElementById("scene");
 const scene = new Scene(canvas, { debug: debugFlag });
 await scene.loadLayout("assets/scene.json");
-const registry = await loadSprites("assets/sprites.json");
+const builtinLayout = scene.layout;
+const builtinManifest = await (await fetch("assets/sprites.json")).json();
+let registry = await loadSprites("assets/sprites.json");
+
+// M5 #21: apply persisted asset overrides before the first frame so a swap
+// survives reloads without a redeploy.
+function applyStoredOverrides() {
+  const sceneOverride = loadOverride(localStorage, STORAGE_KEYS.scene);
+  if (sceneOverride) scene.layout = sceneOverride.data;
+  const spritesOverride = loadOverride(localStorage, STORAGE_KEYS.sprites);
+  return spritesOverride?.data ?? null;
+}
+
+const storedManifest = applyStoredOverrides();
+if (storedManifest) {
+  try {
+    registry = await createRegistry(parseManifest(storedManifest));
+  } catch {
+    registry = await loadSprites("assets/sprites.json");
+  }
+}
+const [sw, sh] = scene.layout.size;
+canvas.width = sw;
+canvas.height = sh;
 
 const characters = new Map();
 let mode = "offline";
@@ -87,6 +112,9 @@ function makeDemo() {
     list() {
       return characters.size === 0 ? [char] : [];
     },
+    getChar() {
+      return char;
+    },
     update(dt, _time) {
       if (characters.size > 0) return;
       const step = DEMO_LOOP[i];
@@ -152,3 +180,29 @@ document.addEventListener("keydown", (e) => {
 const memo = new MemoCard({ container: document.body, fetchUrl: "/api/memo" });
 memo.mount();
 memo.show();
+
+// Asset manager sidebar (M5 #21): password-protected, hot-swaps scene/sprites
+// and persists overrides in localStorage.
+const assetManager = new AssetManager({
+  scene,
+  registry,
+  builtins: { scene: builtinLayout, sprites: builtinManifest },
+  storage: localStorage,
+  onChange: {
+    scene: (layout) => {
+      for (const c of characters.values()) {
+        c.layout = layout;
+        let zone = c.zone;
+        if (!zoneById(layout, zone)) zone = layout.stateZone?.idle ?? layout.zones[0]?.id;
+        const spot = zone ? pickSpot(layout, zone, c.id) : null;
+        if (spot) c.target = spot;
+      }
+      if (demo) demo.getChar().layout = layout;
+    },
+    sprites: (next) => {
+      for (const c of characters.values()) c.sprite = pickSprite(next, c.id);
+      if (demo) demo.getChar().sprite = next.get(next.defaultId);
+    },
+  },
+});
+assetManager.mount();
