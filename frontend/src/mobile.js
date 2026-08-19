@@ -281,14 +281,18 @@ export class MobileAgentSheet {
         <span class="detail-value">${this.escapeHtml(char.detail)}</span>
       </div>
       ` : ""}
+      ${char.joinedAt ? `
       <div class="detail-row">
         <span class="detail-label">Joined</span>
-        <span class="detail-value">${this.formatTime(char.joinedAt ?? Date.now())}</span>
+        <span class="detail-value">${this.formatTime(char.joinedAt)}</span>
       </div>
+      ` : ""}
+      ${char.lastSeen ? `
       <div class="detail-row">
         <span class="detail-label">Last seen</span>
-        <span class="detail-value">${this.formatTime(char.lastSeen ?? Date.now())}</span>
+        <span class="detail-value">${this.formatTime(char.lastSeen)}</span>
       </div>
+      ` : ""}
     `;
   }
 

@@ -9,7 +9,7 @@ function roundRectPath(g, x, y, w, h, r) {
   g.rect(x, y, w, h);
 }
 
-export function drawSpeechBubble(g, x, y, text, { maxW = 160, fontSize = 11 } = {}) {
+export function drawSpeechBubble(g, x, y, text, { maxW = 120, fontSize = 11 } = {}) {
   g.font = `${fontSize}px ui-monospace, Menlo, monospace`;
   g.textAlign = "left";
   const words = String(text).split(/\s+/);
@@ -51,6 +51,8 @@ export function drawSpeechBubble(g, x, y, text, { maxW = 160, fontSize = 11 } = 
 export function drawIconBubble(g, x, y, icon, state) {
   const colors = {
     idle: "#8fb3ff",
+    writing: "#35d07f",
+    researching: "#6a9fe8",
     thinking: "#8fb3ff",
     waiting: "#ffb454",
     error: "#ff6b6b",

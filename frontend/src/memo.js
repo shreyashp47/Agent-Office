@@ -61,7 +61,7 @@ export class MemoCard {
       <style>
         .memo-card {
           position: fixed;
-          bottom: 20px;
+          bottom: 64px;
           right: 20px;
           width: 320px;
           max-height: 40vh;

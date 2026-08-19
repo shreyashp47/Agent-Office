@@ -21,6 +21,23 @@ export function zoneForState(layout, state) {
   return (layout.stateZone ?? {})[state] ?? null;
 }
 
+// Deterministic fan-out offsets for zones that only declare a single spot
+// (P1-2): several agents sharing a zone stay legible instead of stacking
+// perfectly. Offsets stay inside the zone bounds around the declared spot.
+export function spreadOffsets(zone) {
+  const ox = Math.min(26, Math.max(8, zone.w / 4));
+  const oy = Math.min(18, Math.max(6, zone.h / 6));
+  return [
+    [0, 0],
+    [-ox, 0],
+    [ox, 0],
+    [0, -oy],
+    [0, oy],
+    [-ox, oy],
+    [ox, -oy],
+  ];
+}
+
 export function pickSpot(layout, zoneId, agentId) {
   const zone = zoneById(layout, zoneId);
   if (!zone) return null;
@@ -28,7 +45,14 @@ export function pickSpot(layout, zoneId, agentId) {
   if (spots.length === 0) {
     return { x: zone.x + zone.w / 2, y: zone.y + zone.h / 2 };
   }
-  const [sx, sy] = spots[hashId(agentId ?? "") % spots.length];
+  const id = hashId(agentId ?? "");
+  if (spots.length === 1) {
+    const [sx, sy] = spots[0];
+    const offs = spreadOffsets(zone);
+    const [ox, oy] = offs[id % offs.length];
+    return { x: sx + ox, y: sy + oy };
+  }
+  const [sx, sy] = spots[id % spots.length];
   return { x: sx, y: sy };
 }
 
