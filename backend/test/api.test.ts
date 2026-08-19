@@ -115,4 +115,66 @@ describe("API", () => {
     });
     expect(full.status).toBe(403);
   });
+
+  it("agent-push is rate limited to 4 req/s (429)", async () => {
+    const { app } = testApp();
+    const join = await app.request("/join-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key: SAMPLE_KEY, name: "spammer" }),
+    });
+    const { agentId, token } = await join.json();
+
+    let limited = false;
+    for (let i = 0; i < 6; i++) {
+      const res = await app.request("/agent-push", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ agentId, token, state: "writing" }),
+      });
+      if (res.status === 429) limited = true;
+      else expect(res.status).toBe(200);
+    }
+    expect(limited).toBe(true);
+  });
+
+  it("leave-agent with wrong token → 401, agent stays", async () => {
+    const { app } = testApp();
+    const join = await app.request("/join-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key: SAMPLE_KEY, name: "stubborn" }),
+    });
+    const { agentId } = await join.json();
+
+    const bad = await app.request("/leave-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agentId, token: "nope" }),
+    });
+    expect(bad.status).toBe(401);
+
+    const status = await app.request("/status");
+    const snapshot = await status.json();
+    expect(snapshot.agents[agentId]).toBeDefined();
+  });
+
+  it("leave-agent clears the agent from its join key roster", async () => {
+    const { app, store } = testApp();
+    const join = await app.request("/join-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key: SAMPLE_KEY, name: "leaver" }),
+    });
+    const { agentId, token } = await join.json();
+    expect(store.snapshot().joinKeys[SAMPLE_KEY]!.agents).toContain(agentId);
+
+    const leave = await app.request("/leave-agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agentId, token }),
+    });
+    expect(leave.status).toBe(200);
+    expect(store.snapshot().joinKeys[SAMPLE_KEY]!.agents).not.toContain(agentId);
+  });
 });

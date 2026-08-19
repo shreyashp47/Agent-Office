@@ -1,7 +1,8 @@
 import { serve } from "@hono/node-server";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createApp, SAMPLE_KEY, VERSION } from "./app.js";
+import { createApp, VERSION } from "./app.js";
+import { ensureJoinKeysFile, loadJoinKeysFile } from "./join-keys.js";
 import { createSweeper } from "./sweeper.js";
 import { StateStore } from "./store.js";
 
@@ -10,10 +11,12 @@ const ROOT = join(__dirname, "..", "..");
 const PORT = Number(process.env.PORT ?? 4099);
 const HOST = process.env.HOST ?? "127.0.0.1";
 const STATE_PATH = process.env.STATE_PATH ?? join(ROOT, "state.json");
+const JOIN_KEYS_PATH = process.env.JOIN_KEYS_PATH ?? join(ROOT, "join-keys.json");
 const FRONTEND_DIST = join(ROOT, "frontend", "dist");
 
 const store = new StateStore(STATE_PATH);
-store.ensureJoinKey(SAMPLE_KEY, 3);
+ensureJoinKeysFile(JOIN_KEYS_PATH);
+store.syncJoinKeys(loadJoinKeysFile(JOIN_KEYS_PATH));
 
 const app = createApp(store, FRONTEND_DIST);
 
@@ -35,4 +38,4 @@ process.on("SIGTERM", shutdown);
 
 console.log(`[agent-office] v${VERSION} → http://${HOST}:${PORT}`);
 console.log(`[agent-office] state file: ${STATE_PATH}`);
-console.log(`[agent-office] default join key: ${SAMPLE_KEY}`);
+console.log(`[agent-office] join keys file: ${JOIN_KEYS_PATH}`);

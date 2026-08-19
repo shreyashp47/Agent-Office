@@ -1,64 +1,108 @@
 # Agent Office
 
-A 2D status board for your AI coding agents. Each agent is a little badge that
-sits at a desk while it's working, moves to the Requirements room when it's
-idle, and heads to the Café when it's rate-limited / out of tokens.
+A pixel-art office dashboard for [OpenCode](https://opencode.ai) agents. Each agent is a character that moves through zones (desk, sofa, server corner, door) based on real-time OpenCode plugin hooks — `tool.execute.before/after`, `session.idle`, `session.error`, `permission.asked`.
 
-## Quick start (just look at it)
+> **Status (2026-08-18):** M0–M2 ✅ done, M3 (frontend) in progress, M4/M5 backend+devops ✅ done
+> - **Backend (Hono, port 4099):** `/health`, `/status`, `/events` (SSE), `/join-agent`, `/agent-push`, `/leave-agent`, `/set_state`
+> - **Plugin:** Auto-joins office, maps tool events → states, 15s heartbeat, clean leave on dispose
+> - **Multi-agent:** Join keys (`join-keys.json`, auto-created on first run), per-agent bearer tokens, capacity enforcement
+> - **DevOps:** Smoke test (`npm run smoke`), Cloudflare tunnel (`npm run tunnel`), CI validated
 
-Double-click `index.html` — it opens in your browser with one demo agent
-already seated. Turn on **Demo mode** in the side panel to watch agents move
-between rooms automatically, or use the ● / ◐ / ☕ buttons next to each agent
-to move them yourself.
-
-This mode is fully manual/offline — nothing is being monitored yet.
-
-## Live mode (auto-tracks real OpenCode activity)
+## Quick Start
 
 ```bash
-node server.js
-# then open:
-open http://localhost:4747
+# Install & build
+npm install && npm run build
+
+# Start backend (port 4099)
+npm run dev
+
+# Install OpenCode plugin (global, one-time)
+npm run install-plugin
 ```
 
-`server.js` does two things:
+Then open `http://127.0.0.1:4099` — the frontend (M3) will show agents as they join.
 
-1. Serves `index.html` and `status.json` on `http://localhost:4747` (the page
-   polls `status.json` every 3 seconds — this only works over `http://`, not
-   when you open the file directly, due to browser file-access restrictions).
-2. Tails OpenCode's own log file and flips the agent's state:
-   - matches something that looks like active work → **working** (desk)
-   - matches a `429` / rate-limit / quota line → **break** (café)
-   - no activity for 15s → back to **waiting** (requirements room)
+## Commands
 
-On startup it runs `opencode debug paths` to find your log directory. If that
-command isn't found it falls back to `~/.local/share/opencode/log`. Check the
-first console line it prints to confirm it found the right folder.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start backend with hot-reload (`http://127.0.0.1:4099`) |
+| `npm start` | Start built backend |
+| `npm test` | Run backend tests (vitest) |
+| `npm run lint` | ESLint check |
+| `npm run typecheck` | TypeScript type-check (backend, plugin, scripts) |
+| `npm run build` | Build backend + plugin + copy frontend assets |
+| `npm run smoke` | Smoke test all endpoints (`scripts/smoke_test.ts`) |
+| `npm run tunnel` | Share office publicly via Cloudflare quick tunnel |
+| `npm run install-plugin` | Copy plugin to `~/.config/opencode/plugins/` |
 
-## The detection is a starting point, not exact
+## Multi-Agent (Join Keys)
 
-I don't know your exact OpenCode version's log format, so the patterns in
-`server.js` (`workingPattern`, `breakPattern`) are a reasonable guess based on
-its public log format (`ERROR service=llm error={"statusCode":429,...}`).
-Open a real log file in the folder it printed and see what your activity
-actually looks like, then tighten those two regexes in `server.js`. That's
-the one part of this you'll likely want to tune by hand.
+The office supports multiple OpenCode instances sharing one backend.
 
-There's no way to reliably detect "out of tokens" versus a generic API error
-purely from the outside — OpenCode itself is the only thing that really knows
-that. The 429/rate-limit match is the closest external signal available.
+- **join-keys.json** — auto-created from sample on first run; maps key → `maxAgents`
+- **/join-agent** — POST `{ key, name, sprite? }` → returns `{ agentId, token }`
+  - Wrong key → `401`
+  - Key at capacity → `403`
+- **/agent-push** — POST `{ agentId, token, state, detail? }` (rate-limited 4 req/s)
+- **/leave-agent** — POST `{ agentId, token }` — cleans up roster
 
-## Tracking more than one tool
+## Public Access (Cloudflare Tunnel)
 
-`WATCHERS` near the top of `server.js` is a list — duplicate the OpenCode
-entry, point `logDir` at the other tool's log location, and adjust the
-patterns. Each entry gets its own desk/room slot automatically. If a tool
-doesn't write logs you can watch, you can still represent it manually: add it
-with the **Add agent** form in the UI and move it with the state buttons —
-useful for tools you're running by hand.
+One command, shareable `https://<random>.trycloudflare.com` URL:
 
-## Files
+```bash
+npm run tunnel
+# or
+./scripts/tunnel.sh
+```
 
-- `index.html` — the office UI (self-contained, no build step)
-- `server.js` — local server + OpenCode log watcher (Node, no dependencies)
-- `status.json` — written by `server.js`; the UI polls this for live state
+See [docs/PUBLIC_ACCESS.md](docs/PUBLIC_ACCESS.md) for details, security notes, and persistent tunnel options.
+
+## OpenCode Plugin
+
+Install globally (once):
+
+```bash
+npm run install-plugin
+```
+
+Configure via env (in your shell profile or `.opencode/config.json`):
+
+```bash
+export OFFICE_URL=http://127.0.0.1:4099
+export OFFICE_JOIN_KEY=ocj_local_01    # or your team key
+export OFFICE_AGENT_NAME=my-bot        # optional, defaults to directory name
+```
+
+Restart OpenCode — the plugin auto-joins and reports state changes in real time.
+
+## State Model
+
+| State | Zone | Trigger |
+|-------|------|---------|
+| `idle` | sofa | `session.idle`, no heartbeat >60s |
+| `writing` | desk | `edit` / `write` / `patch` |
+| `researching` | desk | `read` / `grep` / `glob` / `webfetch` / `websearch` |
+| `executing` | desk | `bash` / `task` |
+| `thinking` | desk | `chat.message` streaming, no tool |
+| `waiting` | door | `permission.asked` |
+| `error` | server | `session.error` |
+
+Heartbeat: 15s. Sweeper: >60s silent → `idle`, >120s → `offline` (removed).
+
+## Project Structure
+
+```
+backend/      # Hono + TypeScript API, state store, sweeper
+frontend/     # Canvas 2D pixel office (M3 in progress)
+plugin/       # OpenCode plugin (office-sync.ts)
+assets/       # Sprites, scenes (manifest.json)
+scripts/      # smoke_test.ts, tunnel.sh
+docs/         # PUBLIC_ACCESS.md
+```
+
+## License
+
+MIT

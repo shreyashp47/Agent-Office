@@ -1,6 +1,6 @@
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { isState, STATE_ZONE, type Agent, type AgentState, type OfficeState } from "./states.js";
+import { isState, STATE_ZONE, type Agent, type AgentState, type JoinKey, type OfficeState } from "./states.js";
 
 const DEFAULT_STATE: OfficeState = {
   agents: {},
@@ -105,6 +105,33 @@ export class StateStore {
       this.emit();
     }
     return this.state.joinKeys[key];
+  }
+
+  configureJoinKey(key: string, maxAgents: number): JoinKey {
+    const existing = this.state.joinKeys[key];
+    if (existing) {
+      if (existing.maxAgents !== maxAgents) {
+        existing.maxAgents = maxAgents;
+        this.emit();
+      }
+      return existing;
+    }
+    const created: JoinKey = { maxAgents, agents: [] };
+    this.state.joinKeys[key] = created;
+    this.emit();
+    return created;
+  }
+
+  /** Apply the canonical join-keys.json definitions (key -> maxAgents). */
+  syncJoinKeys(keys: Record<string, number>, log: (msg: string) => void = console.warn): void {
+    for (const [key, maxAgents] of Object.entries(keys)) {
+      this.configureJoinKey(key, maxAgents);
+    }
+    for (const [key, joinKey] of Object.entries(this.state.joinKeys)) {
+      if (joinKey.agents.length > 0 && !(key in keys)) {
+        log(`[agent-office] join key "${key}" removed from join-keys.json but still has agents — keeping it`);
+      }
+    }
   }
 
   joinAgent(key: string, name: string, sprite?: string): { agent: Agent } | { error: string; status: number } {
