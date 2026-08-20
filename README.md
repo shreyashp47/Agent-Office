@@ -2,31 +2,30 @@
 
 A pixel-art office dashboard for [OpenCode](https://opencode.ai) agents. Each agent is a character that moves through zones (desk, sofa, server corner, door) based on real-time OpenCode plugin hooks — `tool.execute.before/after`, `session.idle`, `session.error`, `permission.asked`.
 
-> **Status (2026-08-18):** M0–M2 ✅ done, M3 (frontend) in progress, M4/M5 backend+devops ✅ done
+> **Status (2026-08-20):** All milestones shipped — M0 scaffold, M1 backend, M2 OpenCode plugin, M3 pixel-office frontend, M4 multi-agent, M5 polish (v0.2.0).
 > - **Backend (Hono, port 4099):** `/health`, `/status`, `/events` (SSE), `/join-agent`, `/agent-push`, `/leave-agent`, `/set_state`
 > - **Plugin:** Auto-joins office, maps tool events → states, 15s heartbeat, clean leave on dispose
 > - **Multi-agent:** Join keys (`join-keys.json`, auto-created on first run), per-agent bearer tokens, capacity enforcement
-> - **DevOps:** Smoke test (`npm run smoke`), Cloudflare tunnel (`npm run tunnel`), CI validated
+> - **DevOps:** Smoke test (`npm run smoke`), Cloudflare tunnel (`npm run tunnel`), single-command start (`npx opencode-office`), CI validated
 
 ## Quick Start
 
 ```bash
-# Install & build
-npm install && npm run build
-
-# Start backend (port 4099)
-npm run dev
+# One command: builds if needed, serves the office at http://127.0.0.1:4099
+npm run office
+# or, published: npx opencode-office
 
 # Install OpenCode plugin (global, one-time)
 npm run install-plugin
 ```
 
-Then open `http://127.0.0.1:4099` — the frontend (M3) will show agents as they join.
+Then open `http://127.0.0.1:4099` — agents appear in the office as OpenCode instances join.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
+| `npm run office` | One-command start — builds if needed, serves at `:4099` (`--port`, `--host`, `--open` flags) |
 | `npm run dev` | Start backend with hot-reload (`http://127.0.0.1:4099`) |
 | `npm start` | Start built backend |
 | `npm test` | Run backend tests (vitest) |
@@ -96,7 +95,7 @@ Heartbeat: 15s. Sweeper: >60s silent → `idle`, >120s → `offline` (removed).
 
 ```
 backend/      # Hono + TypeScript API, state store, sweeper
-frontend/     # Canvas 2D pixel office (M3 in progress)
+frontend/     # Canvas 2D pixel office (sprites, scenes, memo card, asset manager)
 plugin/       # OpenCode plugin (office-sync.ts)
 assets/       # Sprites, scenes (manifest.json)
 scripts/      # smoke_test.ts, tunnel.sh
