@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Pixel-art office dashboard for OpenCode agents",
+  "bin": {
+    "opencode-office": "scripts/opencode-office.mjs"
+  },
   "workspaces": [
     "backend",
     "frontend",
@@ -17,6 +20,7 @@
     "format": "prettier --write .",
     "typecheck": "npm run typecheck -w backend -w plugin && tsc --noEmit -p scripts/tsconfig.json",
     "start": "npm run start -w backend",
+    "office": "node scripts/opencode-office.mjs",
     "dev": "npm run dev -w backend",
     "smoke": "tsx scripts/smoke_test.ts",
     "tunnel": "bash scripts/tunnel.sh",

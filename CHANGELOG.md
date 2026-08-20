@@ -9,7 +9,9 @@ Issue numbers refer to PLAN.md §9.
 
 ## [Unreleased]
 
-- Nothing yet.
+### Added
+
+- **Single-command start** (`npx opencode-office`): zero-dependency CLI that builds if needed and serves the office on one port (`--port`, `--host`, `--open` flags; `$PORT`/`$HOST` honored). Backend honors `OFFICE_ROOT` so it runs from any install location.
 
 ## [0.2.0] — 2026-08-19
 

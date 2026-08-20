@@ -7,7 +7,7 @@ import { createSweeper } from "./sweeper.js";
 import { StateStore } from "./store.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const ROOT = join(__dirname, "..", "..");
+const ROOT = process.env.OFFICE_ROOT ? join(process.env.OFFICE_ROOT) : join(__dirname, "..", "..");
 const PORT = Number(process.env.PORT ?? 4099);
 const HOST = process.env.HOST ?? "127.0.0.1";
 const STATE_PATH = process.env.STATE_PATH ?? join(ROOT, "state.json");
