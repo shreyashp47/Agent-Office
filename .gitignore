@@ -5,3 +5,4 @@ state.json
 join-keys.json
 .env
 .DS_Store
+.opencode/
