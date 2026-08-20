@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getMimeType } from "hono/utils/mime";
@@ -121,10 +121,14 @@ export function createApp(store: StateStore, frontendDist = DEFAULT_FRONTEND_DIS
   app.get("*", (c) => {
     const urlPath = c.req.path === "/" ? "/index.html" : c.req.path;
     const filePath = join(frontendDist, urlPath);
-    if (existsSync(filePath)) {
-      return c.body(readFileSync(filePath), 200, {
-        "Content-Type": getMimeType(filePath) ?? "application/octet-stream",
-      });
+    try {
+      if (statSync(filePath).isFile()) {
+        return c.body(readFileSync(filePath), 200, {
+          "Content-Type": getMimeType(filePath) ?? "application/octet-stream",
+        });
+      }
+    } catch {
+      // missing, directory, or unreadable — fall through to placeholder
     }
     return c.html(PLACEHOLDER);
   });
