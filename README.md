@@ -2,6 +2,8 @@
 
 A pixel-art office dashboard for [OpenCode](https://opencode.ai) agents. Each agent is a character that moves through zones (desk, sofa, server corner, door) based on real-time OpenCode plugin hooks — `tool.execute.before/after`, `session.idle`, `session.error`, `permission.asked`.
 
+![Agent Office](docs/screenshot.png)
+
 > **Status (2026-08-20):** All milestones shipped — M0 scaffold, M1 backend, M2 OpenCode plugin, M3 pixel-office frontend, M4 multi-agent, M5 polish (v0.2.0).
 > - **Backend (Hono, port 4099):** `/health`, `/status`, `/events` (SSE), `/join-agent`, `/agent-push`, `/leave-agent`, `/set_state`
 > - **Plugin:** Auto-joins office, maps tool events → states, 15s heartbeat, clean leave on dispose
