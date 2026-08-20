@@ -3,6 +3,7 @@ dist/
 *.log
 state.json
 join-keys.json
+status.json
 .env
 .DS_Store
 .opencode/

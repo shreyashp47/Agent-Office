@@ -1,9 +1,29 @@
 {
   "name": "agent-office",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Pixel-art office dashboard for OpenCode agents",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shreyashp47/Agent-Office.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shreyashp47/Agent-Office/issues"
+  },
+  "homepage": "https://github.com/shreyashp47/Agent-Office",
+  "keywords": [
+    "opencode",
+    "dashboard",
+    "pixel-art",
+    "office",
+    "agents",
+    "visualization"
+  ],
   "bin": {
     "opencode-office": "scripts/opencode-office.mjs"
   },

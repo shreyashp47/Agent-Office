@@ -1,5 +1,10 @@
 # Agent Office
 
+![CI](https://github.com/shreyashp47/Agent-Office/actions/workflows/ci.yml/badge.svg)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Node](https://img.shields.io/badge/node-%3E%3D20-339933)
+
 A pixel-art office dashboard for [OpenCode](https://opencode.ai) agents. Each agent is a character that moves through zones (desk, sofa, server corner, door) based on real-time OpenCode plugin hooks — `tool.execute.before/after`, `session.idle`, `session.error`, `permission.asked`.
 
 ![Agent Office](docs/screenshot.png)
@@ -106,4 +111,8 @@ docs/         # PUBLIC_ACCESS.md
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
+
+## Contributing
+
+Bug reports and feature requests are welcome. See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development setup and conventions, our [Code of Conduct](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
