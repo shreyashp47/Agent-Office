@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hashId, pickSpot, stepToward, clampText, zoneById, zoneForState, WALK_SPEED, TWEEN_EPS, DETAIL_MAX } from "../src/logic.js";
+import { hashId, pickSpot, spreadOffsets, stepToward, clampText, zoneById, zoneForState, WALK_SPEED, TWEEN_EPS, DETAIL_MAX } from "../src/logic.js";
 
 const MOCK_LAYOUT = {
   size: [960, 540],
@@ -97,6 +97,29 @@ describe("pickSpot", () => {
 
   it("returns null for unknown zone", () => {
     expect(pickSpot(MOCK_LAYOUT, "nonexistent", "agent_1")).toBeNull();
+  });
+
+  it("spreads agents around a single-spot zone deterministically (P1-2)", () => {
+    const layout = {
+      size: [960, 540],
+      zones: [{ id: "sofa", x: 50, y: 310, w: 230, h: 150, spots: [[165, 385]] }],
+    };
+    const spots = new Set();
+    for (let i = 0; i < 7; i++) {
+      spots.add(`${pickSpot(layout, "sofa", `agent_${i}`).x},${pickSpot(layout, "sofa", `agent_${i}`).y}`);
+    }
+    // 7 distinct positions (deterministic fan-out), same agent always same spot
+    expect(spots.size).toBeGreaterThan(1);
+    expect(pickSpot(layout, "sofa", "agent_1")).toEqual(pickSpot(layout, "sofa", "agent_1"));
+  });
+
+  it("spreadOffsets stay within the zone bounds", () => {
+    const offs = spreadOffsets({ x: 0, y: 0, w: 80, h: 60 });
+    for (const [ox, oy] of offs) {
+      expect(Math.abs(ox)).toBeLessThanOrEqual(80);
+      expect(Math.abs(oy)).toBeLessThanOrEqual(60);
+    }
+    expect(offs[0]).toEqual([0, 0]);
   });
 });
 

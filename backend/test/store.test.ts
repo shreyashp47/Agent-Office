@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { StateStore } from "../src/store.js";
 import { createSweeper } from "../src/sweeper.js";
+import type { OfficeState } from "../src/states.js";
 
 function tempStore() {
   const dir = mkdtempSync(join(tmpdir(), "office-"));
@@ -73,6 +74,21 @@ describe("StateStore", () => {
 
     const full = store.joinAgent("team", "bot2");
     expect("status" in full && full.status).toBe(403);
+  });
+
+  it("join emits ONE snapshot with the agent already in its join key roster", () => {
+    const store = tempStore();
+    store.ensureJoinKey("team", 3);
+    const snapshots: OfficeState[] = [];
+    store.onChange = (s) => snapshots.push(s);
+    const joined = store.joinAgent("team", "bot");
+    if ("error" in joined) throw new Error("join failed");
+    const id = joined.agent.id;
+
+    expect(snapshots).toHaveLength(1);
+    const snap = snapshots[0];
+    expect(snap.agents[id]).toBeDefined();
+    expect(snap.joinKeys.team?.agents).toContain(id);
   });
 
   it("agent-push requires matching token", () => {

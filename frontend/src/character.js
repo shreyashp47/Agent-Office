@@ -6,6 +6,8 @@ import { drawIconBubble, drawSpeechBubble } from "./bubbles.js";
 
 const STATE_ICON = {
   idle: "💤",
+  writing: "⌨️",
+  researching: "🔍",
   thinking: "💭",
   waiting: "❗",
   error: "🔥",
@@ -30,6 +32,10 @@ export class Character {
     this.state = "idle";
     this.detail = null;
     this.zone = null;
+    // Populated from backend agent state when available (P1-4); stays null
+    // otherwise so the mobile sheet never renders fabricated values.
+    this.joinedAt = null;
+    this.lastSeen = null;
     const spot = pickSpot(layout, layout.stateZone?.idle ?? "sofa", id) ?? { x: 480, y: 270 };
     this.x = spot.x;
     this.y = spot.y;

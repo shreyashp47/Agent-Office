@@ -141,6 +141,7 @@ export class StateStore {
       return { error: "join key at capacity", status: 403 };
     }
     const id = `agent_${randomUUID().slice(0, 8)}`;
+    joinKey.agents.push(id);
     const agent = this.upsertAgent(id, {
       name: String(name).slice(0, 40),
       sprite,
@@ -148,7 +149,6 @@ export class StateStore {
       zone: STATE_ZONE.idle,
       token: randomUUID(),
     });
-    joinKey.agents.push(id);
     return { agent };
   }
 

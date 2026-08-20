@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp, SAMPLE_KEY } from "../src/app.js";
@@ -9,7 +9,9 @@ function testApp() {
   const dir = mkdtempSync(join(tmpdir(), "office-api-"));
   const store = new StateStore(join(dir, "state.json"));
   store.ensureJoinKey(SAMPLE_KEY, 3);
-  return { app: createApp(store, join(dir, "dist")), store };
+  const dist = join(dir, "dist");
+  mkdirSync(join(dist, "assets"), { recursive: true });
+  return { app: createApp(store, dist), store };
 }
 
 describe("API", () => {
@@ -24,6 +26,26 @@ describe("API", () => {
     const { app } = testApp();
     const res = await app.request("/status");
     expect(await res.json()).toMatchObject({ agents: {} });
+  });
+
+  it("GET /assets/ (directory) returns placeholder, not a 500", async () => {
+    const { app } = testApp();
+    const res = await app.request("/assets/");
+    expect(res.status).not.toBe(500);
+    expect(res.status).toBe(200);
+    expect((await res.text()).toLowerCase()).toContain("agent office");
+  });
+
+  it("GET /src/app.js serves a real file from dist", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "office-api-"));
+    const store = new StateStore(join(dir, "state.json"));
+    const dist = join(dir, "dist");
+    mkdirSync(join(dist, "src"), { recursive: true });
+    writeFileSync(join(dist, "src", "app.js"), "console.log('hi')");
+    const app = createApp(store, dist);
+    const res = await app.request("/src/app.js");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/text\/javascript/);
   });
 
   it("POST /set_state round-trips", async () => {

@@ -17,10 +17,63 @@ const demoEnabled = params.get("demo") !== "0";
 
 const canvas = document.getElementById("scene");
 const scene = new Scene(canvas, { debug: debugFlag });
-await scene.loadLayout("assets/scene.json");
+
+// P1-3: visible loading + error states instead of a blank canvas on failure.
+function showStatus(message, isError = false) {
+  let el = document.getElementById("office-status");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "office-status";
+    el.style.cssText = "position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:300;padding:8px 14px;border-radius:4px;font:12px ui-monospace,Menlo,monospace;background:#141824;border:1px solid #333c4d;color:#9aa4b2;max-width:80vw;text-align:center;";
+    document.body.appendChild(el);
+  }
+  el.style.color = isError ? "#ff8a8a" : "#9aa4b2";
+  el.style.borderColor = isError ? "#5a2626" : "#333c4d";
+  el.textContent = message;
+}
+
+const FALLBACK_LAYOUT = {
+  size: [960, 540],
+  stateZone: {
+    idle: "sofa",
+    writing: "desk",
+    researching: "desk",
+    executing: "desk",
+    thinking: "desk",
+    waiting: "door",
+    error: "server",
+  },
+  zones: [
+    { id: "sofa", x: 60, y: 310, w: 240, h: 150, spots: [[180, 390]] },
+    { id: "desk", x: 340, y: 260, w: 280, h: 140, spots: [[390, 390], [560, 390]] },
+    { id: "door", x: 40, y: 430, w: 140, h: 100, spots: [[95, 500]] },
+    { id: "server", x: 790, y: 160, w: 130, h: 130, spots: [[855, 252]] },
+  ],
+  furniture: [],
+};
+
+showStatus("Loading office…");
+const startupErrors = [];
+try {
+  await scene.loadLayout("assets/scene.json");
+} catch (e) {
+  startupErrors.push(`scene: ${e.message}`);
+  scene.layout = FALLBACK_LAYOUT;
+}
 const builtinLayout = scene.layout;
-const builtinManifest = await (await fetch("assets/sprites.json")).json();
-let registry = await loadSprites("assets/sprites.json");
+const builtinManifest = await (await fetch("assets/sprites.json")).json().catch(() => null);
+let registry;
+try {
+  registry = await loadSprites("assets/sprites.json");
+} catch (e) {
+  startupErrors.push(`sprites: ${e.message}`);
+  registry = await createRegistry(parseManifest({ default: "worker", sprites: { worker: {} } }));
+}
+if (startupErrors.length) {
+  showStatus(`⚠ Startup issue — ${startupErrors.join("; ")} (using fallback assets)`, true);
+} else {
+  showStatus("");
+}
 
 // M5 #21: apply persisted asset overrides before the first frame so a swap
 // survives reloads without a redeploy.
@@ -62,6 +115,8 @@ function upsertAgent(agent) {
     characters.set(agent.id, c);
   }
   c.setState(agent.state, agent.detail, agent.zone);
+  if (agent.joinedAt) c.joinedAt = agent.joinedAt;
+  if (agent.lastSeen) c.lastSeen = agent.lastSeen;
 }
 
 connectOffice({
@@ -74,7 +129,7 @@ connectOffice({
     for (const id of [...characters.keys()]) {
       if (!seen.has(id)) characters.delete(id);
     }
-    mobileSheet.sheet.update(characters);
+    syncMobile();
   },
   onModeChange: (m) => {
     mode = m;
@@ -124,11 +179,20 @@ function makeDemo() {
       if (t >= step.hold) {
         t = 0;
         i = (i + 1) % DEMO_LOOP.length;
+        syncMobile();
       }
     },
   };
 }
 const demo = demoEnabled ? makeDemo() : null;
+
+// P1-5: mirror what the canvas shows in the mobile sheet — the demo character
+// when the office is empty, the real agent map otherwise.
+function syncMobile() {
+  const demoChars = demo ? demo.list() : [];
+  mobileSheet.sheet.update(demoChars.length ? new Map(demoChars.map((c) => [c.id, c])) : characters);
+}
+syncMobile();
 
 let last = 0;
 function frame(t) {
